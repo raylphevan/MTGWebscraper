@@ -18,60 +18,76 @@ def get_listing_name(soup):
   # Should be okay because there needs to be a listing name
 
   contents = []
-  for item in soup.find('h1', id='itemTitle'):
+  for item in soup.find('h1', id="itemTitle"):
     contents.append(item)
   
-  print(contents[1])
   return contents[1]
 
 
 
 def get_price(soup):
   try:
-    price = soup.find('span', id='prcIsum').get_text()
+    price = soup.find('span', id="prcIsum").get_text()
   except:
-    price = ''
+    try:
+      price = soup.find('span', id="prcIsum_bidPrice").get_text()
+    except:
+      price = ''
 
-  print(price)
   return price
 
 
 
 def get_condition(soup):
   try: 
-    condition = soup.find('div', id='vi-itm-cond').get_text()
+    condition = soup.find('div', id="vi-itm-cond").get_text()
   except:
     condition = ''
 
-  print(condition)
   return condition
-
-
-
-def get_satisfaction(soup):
-  try:
-    satisfaction = soup.find('span', class_="w2b-sgl").get_text()
-  except:
-    satisfaction = ''
-  
-  print(satisfaction)
-  return satisfaction
 
 
 
 def get_total_sold(soup):
   try:
-    total = soup.find('div', class_="w2b-cnt w2b-3 w2b-brdr").find('span', class_="w2b-sgl").get_text()
+    total = soup.find('span', class_="vi-qtyS-hot-red").find('a').text.strip().split(' ')[0]
   except:
     total = ''
 
-  print(total)
   return total
 
 
 
-def get_listing_url(soup):
-  return 0
+def get_seller_feedback(soup):
+  try:
+    feedback = soup.find('div', id="si-fb").get_text()
+    feedback = feedback.replace('\xa0', ' ')
+  except:
+    feedback = ''
+  
+  return feedback
+
+
+
+def get_feeback_score(soup):
+  try:
+    score = soup.find('span', class_="mbg-l").find('a').get_text()
+  except:
+    score = ''
+
+  return score
+
+
+
+def get_urls(soup):
+  try:
+    links = soup.find_all('a', class_="s-item__link")
+  except:
+    links = []
+
+  urls = [item.get('href') for item in links]
+
+  return urls
 
 
 
@@ -80,16 +96,33 @@ def pack_info(soup):
     'name': get_listing_name(soup),
     'price': get_price(soup),
     'condition': get_condition(soup),
-    'satisfaction': get_satisfaction(soup),
-    'total sold': get_total_sold(soup)
+    'total sold': get_total_sold(soup),
+    'feedback': get_seller_feedback(soup),
+    'feedback score': get_feeback_score(soup)
   }
+
   return data
 
 
 
+def write_csv(data, url):
+  with open('output.csv', 'a') as csvfile:
+    w = writer(csvfile)
+
+    row = [data['name'], data['price'], data['condition'], data['total sold'], data['feedback'], data['feedback score'], url]
+    w.writerow(row)
+
+
+
 def main():
-  url = 'https://www.ebay.com/itm/Magic-The-Gathering-Zendikar-Rising-Set-Booster-Box-IN-STOCK-FREE-PRIORITY-SHIP/363143481926?hash=item548d09ca46:g:ZPEAAOSwzV5fiaUa'
-  print(pack_info(get_page(url)))
+  url = 'https://www.ebay.com/sch/i.html?_nkw=magic+the+gathering+zendikar+rising+booster+box&_pgn=1'
+
+  products = get_urls(get_page(url))
+
+  for link in products:
+    data = pack_info(get_page(link))
+    write_csv(data, link)
+
 
 if __name__ == "__main__":
   main()
